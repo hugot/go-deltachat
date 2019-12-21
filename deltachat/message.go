@@ -8,6 +8,10 @@ type Message struct {
 	msg *C.dc_msg_t
 }
 
+func (m *Message) getCMessage() *C.dc_msg_t {
+	return m.msg
+}
+
 func (m *Message) GetChatID() uint32 {
 	return uint32(C.dc_msg_get_chat_id(m.msg))
 }
