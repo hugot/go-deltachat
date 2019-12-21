@@ -1,13 +1,15 @@
 package deltachat
 
 // #cgo CFLAGS: -I../deltachat-ffi/include
-// #cgo LDFLAGS: -L../deltachat-ffi/lib -ldeltachat
+// #cgo LDFLAGS: -L../deltachat-ffi/lib -ldeltachat -ldl -lm
 // #include <deltachat.h>
 // #include <godeltachat.h>
+// #include <stdlib.h>
 import "C"
 
 import (
 	"sync"
+	"unsafe"
 )
 
 var deltachatCbMutex sync.RWMutex
@@ -30,7 +32,6 @@ func godeltachat_eventhandler_proxy(
 	data1 C.uintptr_t,
 	data2 C.uintptr_t,
 ) C.uintptr_t {
-
 	deltachatCbMutex.RLock()
 
 	callback, ok := deltachatCallbacks[context]
@@ -63,15 +64,23 @@ type Client struct {
 }
 
 func (c *Client) SetConfig(key string, value string) {
-	C.dc_set_config(c.context, C.CString(key), C.CString(value))
+	cKey, cValue := C.CString(key), C.CString(value)
+	C.dc_set_config(c.context, cKey, cValue)
+	freeCString(cKey, cValue)
 }
 
 func (c *Client) GetConfig(key string) string {
-	return C.GoString(C.dc_get_config(c.context, C.CString(key)))
+	cConfigValue := C.dc_get_config(c.context, C.CString(key))
+	configValue := C.GoString(cConfigValue)
+	freeCString(cConfigValue)
+
+	return configValue
 }
 
 func (c *Client) Open(databaseLocation string) {
-	C.dc_open(c.context, C.CString(databaseLocation), nil)
+	cDatabaseLocation := C.CString(databaseLocation)
+	C.dc_open(c.context, cDatabaseLocation, nil)
+	freeCString(cDatabaseLocation)
 }
 
 func (c *Client) Configure() {
@@ -107,15 +116,23 @@ func (c *Client) StartWorkers() {
 	go c.smtpRoutine()
 }
 
-func (c *Client) CreateChatByContactID(ID C.uint) C.uint {
-	return C.dc_create_chat_by_contact_id(c.context, C.uint(ID))
+func (c *Client) CreateChatByContactID(ID uint32) uint32 {
+	return uint32(C.dc_create_chat_by_contact_id(c.context, C.uint32_t(ID)))
 }
 
-func (c *Client) SendTextMessage(chatID C.uint, message string) {
-	C.dc_send_text_msg(c.context, C.uint(chatID), C.CString(message))
+func (c *Client) SendTextMessage(chatID uint32, message string) {
+	cMessage := C.CString(message)
+	C.dc_send_text_msg(c.context, C.uint32_t(chatID), cMessage)
+	freeCString(cMessage)
 }
 
-func (c *Client) CreateContact(name *string, address *string) C.uint {
+func freeCString(strings ...*C.char) {
+	for _, s := range strings {
+		C.free(unsafe.Pointer(s))
+	}
+}
+
+func (c *Client) CreateContact(name *string, address *string) uint32 {
 	var nameString *C.char
 
 	if name != nil {
@@ -128,5 +145,9 @@ func (c *Client) CreateContact(name *string, address *string) C.uint {
 		addressString = C.CString(*address)
 	}
 
-	return C.dc_create_contact(c.context, nameString, addressString)
+	contactID := C.dc_create_contact(c.context, nameString, addressString)
+
+	freeCString(nameString, addressString)
+
+	return uint32(contactID)
 }

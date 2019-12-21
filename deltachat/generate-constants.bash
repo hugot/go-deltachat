@@ -8,10 +8,7 @@ destination="$here/constants.go"
 {
     printf 'package deltachat\n\n'
 
-    printf '// #cgo CFLAGS: -I../deltachat-ffi/include
-// #cgo LDFLAGS: -L../deltachat-ffi/lib -ldeltachat
-// #include <deltachat.h>
-// #include <godeltachat.h>
+    printf '// #include <deltachat.h>
 import "C"\n'
 
     printf 'const (\n'
@@ -33,7 +30,7 @@ import "C"\n'
                    *) false;;
                esac
             then
-                printf '%s = C.%s\n' "$const_name" "$const_name"
+                printf '%s = int(C.%s)\n' "$const_name" "$const_name"
             fi
         fi
     done < "$here"/../deltachat-ffi/include/deltachat.h
