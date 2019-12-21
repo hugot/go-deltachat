@@ -3,3 +3,6 @@ uintptr_t godeltachat_eventhandler(dc_context_t* context, int event,
 
 dc_context_t* godeltachat_create_context();
 
+int godeltachat_event_data1_is_string(int event);
+
+int godeltachat_event_data2_is_string(int event);

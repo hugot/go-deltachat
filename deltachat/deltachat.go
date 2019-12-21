@@ -7,7 +7,6 @@ package deltachat
 import "C"
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -86,12 +85,59 @@ func (c *Client) Open(databaseLocation string) {
 	C.dc_open(c.context, C.CString(databaseLocation), nil)
 }
 
+func (c *Client) Configure() {
+	C.dc_configure(c.context)
+}
+
 func (c *Client) handleEvent(
 	context *C.dc_context_t,
 	event C.int,
 	data1 C.uintptr_t,
 	data2 C.uintptr_t,
 ) C.uintptr_t {
-	fmt.Println("I was Called!!!")
 	return 0
+}
+
+func (c *Client) imapRoutine() {
+	for {
+		C.dc_perform_imap_jobs(c.context)
+		C.dc_perform_imap_fetch(c.context)
+		C.dc_perform_imap_idle(c.context)
+	}
+}
+
+func (c *Client) smtpRoutine() {
+	for {
+		C.dc_perform_smtp_jobs(c.context)
+		C.dc_perform_smtp_idle(c.context)
+	}
+}
+
+func (c *Client) StartWorkers() {
+	go c.imapRoutine()
+	go c.smtpRoutine()
+}
+
+func (c *Client) CreateChatByContactID(ID C.uint) C.uint {
+	return C.dc_create_chat_by_contact_id(c.context, C.uint(ID))
+}
+
+func (c *Client) SendTextMessage(chatID C.uint, message string) {
+	C.dc_send_text_msg(c.context, C.uint(chatID), C.CString(message))
+}
+
+func (c *Client) CreateContact(name *string, address *string) C.uint {
+	var nameString *C.char
+
+	if name != nil {
+		nameString = C.CString(*name)
+	}
+
+	var addressString *C.char
+
+	if address != nil {
+		addressString = C.CString(*address)
+	}
+
+	return C.dc_create_contact(c.context, nameString, addressString)
 }
