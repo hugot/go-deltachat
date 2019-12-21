@@ -4,12 +4,10 @@ package deltachat
 // #cgo LDFLAGS: -L../deltachat-ffi/lib -ldeltachat -ldl -lm
 // #include <deltachat.h>
 // #include <godeltachat.h>
-// #include <stdlib.h>
 import "C"
 
 import (
 	"sync"
-	"unsafe"
 )
 
 var deltachatCbMutex sync.RWMutex
@@ -126,12 +124,6 @@ func (c *Client) SendTextMessage(chatID uint32, message string) {
 	freeCString(cMessage)
 }
 
-func freeCString(strings ...*C.char) {
-	for _, s := range strings {
-		C.free(unsafe.Pointer(s))
-	}
-}
-
 func (c *Client) CreateContact(name *string, address *string) uint32 {
 	var nameString *C.char
 
@@ -150,4 +142,12 @@ func (c *Client) CreateContact(name *string, address *string) uint32 {
 	freeCString(nameString, addressString)
 
 	return uint32(contactID)
+}
+
+func (c *Client) NewMessage(viewType int) *Message {
+	cMsg := C.dc_msg_new(c.context, C.int(viewType))
+
+	return &Message{
+		msg: cMsg,
+	}
 }
