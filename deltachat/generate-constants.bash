@@ -23,6 +23,13 @@ import "C"\n'
                    DC_EVENT_*) :;;
                    DC_LP_*) :;;
                    DC_MSG_*) :;;
+                   DC_GCL_*) :;;
+                   DC_QR_*) :;;
+                   DC_CHAT_*) :;;
+                   DC_STATE_*) :;;
+                   DC_CONTACT_*) :;;
+                   DC_EMPTY_*) :;;
+                   DC_STR_*) :;;
                    *) false;;
                esac
             then
