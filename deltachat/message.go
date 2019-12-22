@@ -21,7 +21,7 @@ func (m *Message) GetDuration() int {
 }
 
 func (m *Message) GetFile() string {
-	return cStringToGo(C.dc_msg_get_file(m.msg))
+	return dcStringToGo(C.dc_msg_get_file(m.msg))
 }
 
 func (m *Message) GetFileBytes() uint64 {
@@ -29,7 +29,7 @@ func (m *Message) GetFileBytes() uint64 {
 }
 
 func (m *Message) GetFileMIME() string {
-	return cStringToGo(C.dc_msg_get_filemime(m.msg))
+	return dcStringToGo(C.dc_msg_get_filemime(m.msg))
 }
 
 func (m *Message) GetFromID() uint32 {
@@ -49,7 +49,7 @@ func (m *Message) GetReceivedTimestamp() int64 {
 }
 
 func (m *Message) GetSetupCodeBegin() string {
-	return cStringToGo(C.dc_msg_get_setupcodebegin(m.msg))
+	return dcStringToGo(C.dc_msg_get_setupcodebegin(m.msg))
 }
 
 func (m *Message) GetShowPadlock() bool {
@@ -73,11 +73,11 @@ func (m *Message) GetSummary(chat *Chat) *Lot {
 }
 
 func (m *Message) GetSummaryText(characters int) string {
-	return cStringToGo(C.dc_msg_get_summarytext(m.msg, C.int(characters)))
+	return dcStringToGo(C.dc_msg_get_summarytext(m.msg, C.int(characters)))
 }
 
 func (m *Message) GetText() string {
-	return cStringToGo(C.dc_msg_get_text(m.msg))
+	return dcStringToGo(C.dc_msg_get_text(m.msg))
 }
 
 func (m *Message) GetTimestamp() int64 {

@@ -28,11 +28,11 @@ func (c *Chat) GetID() uint32 {
 }
 
 func (c *Chat) GetName() string {
-	return cStringToGo(C.dc_chat_get_name(c.chat))
+	return dcStringToGo(C.dc_chat_get_name(c.chat))
 }
 
 func (c *Chat) GetProfileImage() string {
-	return cStringToGo(C.dc_chat_get_profile_image(c.chat))
+	return dcStringToGo(C.dc_chat_get_profile_image(c.chat))
 }
 
 func (c *Chat) GetType() int {
