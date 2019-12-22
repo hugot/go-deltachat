@@ -32,10 +32,8 @@ func (a *Array) GetLongitude(index uint) float64 {
 	return float64(C.dc_array_get_longitude(a.array, C.size_t(index)))
 }
 
-// This string proably shouldn't be free'd as that might destroy part of whatever is in
-// the array
 func (a *Array) GetMarker(index uint) string {
-	return C.GoString(C.dc_array_get_marker(a.array, C.size_t(index)))
+	return dcStringToGo(C.dc_array_get_marker(a.array, C.size_t(index)))
 }
 
 func (a *Array) GetMessageID(index uint) uint32 {
