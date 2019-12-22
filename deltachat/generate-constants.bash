@@ -27,6 +27,9 @@ import "C"\n'
                    DC_CONTACT_*) :;;
                    DC_EMPTY_*) :;;
                    DC_STR_*) :;;
+                   DC_CERTCK_*) :;;
+                   DC_EMPTY_*) :;;
+                   DC_PROVIDER_STATUS_*) :;;
                    *) false;;
                esac
             then
