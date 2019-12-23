@@ -13,7 +13,6 @@ import (
 var deltachatCbMutex sync.RWMutex
 
 type deltachatCallback func(
-	context *C.dc_context_t,
 	event C.int,
 	data1 C.uintptr_t,
 	data2 C.uintptr_t,
@@ -40,7 +39,7 @@ func godeltachat_eventhandler_proxy(
 		panic("dc_context_t callback was called but not set")
 	}
 
-	return callback(context, event, data1, data2)
+	return callback(event, data1, data2)
 }
 
 func NewContext() *Context {
@@ -58,8 +57,17 @@ func NewContext() *Context {
 }
 
 type Context struct {
-	context *C.dc_context_t
+	context      *C.dc_context_t
+	eventHandler EventHandler
+	imapQuit     chan struct{}
+	smtpQuit     chan struct{}
 }
+
+type EventHandler func(
+	event int,
+	data1 C.uintptr_t,
+	data2 C.uintptr_t,
+) uint
 
 func (c *Context) SetConfig(key string, value string) {
 	cKey, cValue := C.CString(key), C.CString(value)
@@ -82,27 +90,44 @@ func (c *Context) Configure() {
 	C.dc_configure(c.context)
 }
 
+func (c *Context) SetHandler(handler EventHandler) {
+	c.eventHandler = handler
+}
+
 func (c *Context) handleEvent(
-	context *C.dc_context_t,
 	event C.int,
 	data1 C.uintptr_t,
 	data2 C.uintptr_t,
 ) C.uintptr_t {
-	return 0
+	if c.eventHandler == nil {
+		return 0
+	}
+
+	return C.uintptr_t(c.eventHandler(int(event), data1, data2))
 }
 
-func (c *Context) imapRoutine() {
+func (c *Context) imapRoutine(quit chan struct{}) {
 	for {
-		C.dc_perform_imap_jobs(c.context)
-		C.dc_perform_imap_fetch(c.context)
-		C.dc_perform_imap_idle(c.context)
+		select {
+		case <-quit:
+			return
+		default:
+			C.dc_perform_imap_jobs(c.context)
+			C.dc_perform_imap_fetch(c.context)
+			C.dc_perform_imap_idle(c.context)
+		}
 	}
 }
 
-func (c *Context) smtpRoutine() {
+func (c *Context) smtpRoutine(quit chan struct{}) {
 	for {
-		C.dc_perform_smtp_jobs(c.context)
-		C.dc_perform_smtp_idle(c.context)
+		select {
+		case <-quit:
+			return
+		default:
+			C.dc_perform_smtp_jobs(c.context)
+			C.dc_perform_smtp_idle(c.context)
+		}
 	}
 }
 
@@ -127,8 +152,16 @@ func (c *Context) PerformSMTPIdle() {
 }
 
 func (c *Context) StartWorkers() {
-	go c.imapRoutine()
-	go c.smtpRoutine()
+	c.imapQuit = make(chan struct{})
+	c.smtpQuit = make(chan struct{})
+
+	go c.imapRoutine(c.imapQuit)
+	go c.smtpRoutine(c.smtpQuit)
+}
+
+func (c *Context) StopWorkers() {
+	close(c.imapQuit)
+	close(c.smtpQuit)
 }
 
 func (c *Context) CreateChatByContactID(ID uint32) uint32 {
