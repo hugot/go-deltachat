@@ -108,13 +108,13 @@ func (c *Client) handleEvent(event int, data1 C.uintptr_t, data2 C.uintptr_t) {
 
 	if !ok {
 		if (EVENT_TYPES_ERROR & event) == event {
-			handleError(eventStruct)
+			go handleError(eventStruct)
 		}
 
 		return
 	}
 
-	handler(c.context, eventStruct)
+	go handler(c.context, eventStruct)
 }
 
 func (c *Client) Open(dbLocation string) {
