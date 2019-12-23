@@ -1,4 +1,4 @@
-module git.code-bloggers.com/hugo/whapp-deltachat
+module github.com/hugot/go-deltachat
 
 go 1.13
 
