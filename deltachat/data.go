@@ -35,6 +35,12 @@ func (d *Data) String() (*string, error) {
 	return &str, nil
 }
 
-func (d *Data) Int() int {
-	return int(d.data)
+func (d *Data) Int() (*int, error) {
+	if d.DataType != DATA_TYPE_INT {
+		return nil, dataTypeError(DATA_TYPE_INT, d.DataType)
+	}
+
+	i := int(d.data)
+
+	return &i, nil
 }
