@@ -49,7 +49,7 @@ func Data1TypeForEvent(event int) uint8 {
 		return DATA_TYPE_STRING
 	}
 
-	if (EVENT_TYPES_DATA2_IS_INT & event) == event {
+	if (EVENT_TYPES_DATA1_IS_INT & event) == event {
 		return DATA_TYPE_INT
 	}
 
