@@ -16,13 +16,3 @@ dc_context_t* godeltachat_create_context()
 {
   return dc_context_new(godeltachat_eventhandler, NULL, NULL);
 }
-
-// Macro wrappers because cgo does not support calling macros
-int godeltachat_event_data1_is_string(int event) {
-  return DC_EVENT_DATA1_IS_STRING(event);
-}
-
-int godeltachat_event_data2_is_string(int event)
-{
-  return DC_EVENT_DATA2_IS_STRING(event);
-}
