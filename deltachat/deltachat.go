@@ -7,6 +7,7 @@ package deltachat
 import "C"
 
 import (
+	"log"
 	"sync"
 )
 
@@ -110,6 +111,7 @@ func (c *Context) imapRoutine(quit chan struct{}) {
 	for {
 		select {
 		case <-quit:
+			log.Println("Quitting IMAP routine")
 			return
 		default:
 			C.dc_perform_imap_jobs(c.context)
@@ -123,6 +125,7 @@ func (c *Context) smtpRoutine(quit chan struct{}) {
 	for {
 		select {
 		case <-quit:
+			log.Println("Quitting SMTP routine")
 			return
 		default:
 			C.dc_perform_smtp_jobs(c.context)
@@ -247,6 +250,13 @@ func (c *Context) CheckQR(QR string) *Lot {
 }
 
 func (c *Context) Close() {
+	c.StopWorkers()
+
+	// The idle jobs can sometimes hang for a bit too long, interrupt them so that the
+	// routines can receive the stop signal through their channels.
+	c.InterruptIMAPIdle()
+	c.InterruptSMTPIdle()
+
 	C.dc_close(c.context)
 }
 

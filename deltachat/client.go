@@ -4,8 +4,7 @@ package deltachat
 import "C"
 import (
 	"fmt"
-
-	"github.com/labstack/gommon/log"
+	"log"
 )
 
 type ClientEventHandler func(context *Context, event *Event)
@@ -54,6 +53,7 @@ func (c *Client) startEventReceiver() {
 		for {
 			select {
 			case <-c.eventReceiverQuit:
+				log.Println("Quitting event receiver")
 				return
 			case event := <-c.rawEventChan:
 				c.handleEvent(event.EventType, event.Data1, event.Data2)
@@ -68,7 +68,7 @@ func (c *Client) stopEventReceiver() {
 
 // Default error handler
 func handleError(event *Event) {
-	log.Error(dcErrorString(event))
+	log.Println(dcErrorString(event))
 }
 
 func dcErrorString(event *Event) string {
@@ -77,7 +77,7 @@ func dcErrorString(event *Event) string {
 	str, err := event.Data2.String()
 
 	if err != nil {
-		log.Error(
+		log.Println(
 			fmt.Sprintf(
 				"Unexpected data type while handeling %s:",
 				name,
@@ -88,7 +88,7 @@ func dcErrorString(event *Event) string {
 		return ""
 	}
 
-	return fmt.Sprintf("%s: %s", name, str)
+	return fmt.Sprintf("%s: %s", name, *str)
 }
 
 func (c *Client) handleEvent(event int, data1 C.uintptr_t, data2 C.uintptr_t) {
@@ -146,8 +146,7 @@ func (c *Client) GetConfig(key string) string {
 }
 
 func (c *Client) Close() {
+	c.stopEventReceiver()
 	(*c.context).Close()
 	(*c.context).Unref()
-
-	c.stopEventReceiver()
 }
