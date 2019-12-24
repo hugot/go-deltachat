@@ -32,12 +32,6 @@ const (
 	DATA_TYPE_NIL
 )
 
-var errorTypeNames = map[int]string{
-	DC_EVENT_ERROR:                   "DC_EVENT_ERROR",
-	DC_EVENT_ERROR_NETWORK:           "DC_EVENT_ERROR_NETWORK",
-	DC_EVENT_ERROR_SELF_NOT_IN_GROUP: "DC_EVENT_ERROR_SELF_NOT_IN_GROUP",
-}
-
 var dataTypeNames = map[uint8]string{
 	DATA_TYPE_INT:    "int",
 	DATA_TYPE_STRING: "string",

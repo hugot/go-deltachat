@@ -11,15 +11,9 @@ type ClientEventHandler func(context *Context, event *Event)
 
 type Client struct {
 	context           *Context
-	rawEventChan      chan *rawEvent
+	eventChan         chan *Event
 	eventReceiverQuit chan struct{}
 	handlerMap        map[int]ClientEventHandler
-}
-
-type rawEvent struct {
-	EventType int
-	Data1     C.uintptr_t
-	Data2     C.uintptr_t
 }
 
 func (c *Client) On(event int, handler ClientEventHandler) {
@@ -30,22 +24,25 @@ func (c *Client) On(event int, handler ClientEventHandler) {
 	c.handlerMap[event] = handler
 }
 
-func (c *Client) queueEvent(event int, data1 C.uintptr_t, data2 C.uintptr_t) uint {
-	c.rawEventChan <- &rawEvent{
+func (c *Client) queueEvent(event int, data1 C.uintptr_t, data2 C.uintptr_t) int {
+	data1Wrapper := NewData1(event, data1)
+	data2Wrapper := NewData2(event, data2)
+
+	c.eventChan <- &Event{
 		EventType: event,
-		Data1:     data1,
-		Data2:     data2,
+		Data1:     *data1Wrapper,
+		Data2:     *data2Wrapper,
 	}
 
 	return 0
 }
 
-// Goroutine that listens for incoming raw events. Should be started for callbacks to be
+// Goroutine that listens for incoming events. Should be started for callbacks to be
 // executed.
 func (c *Client) startEventReceiver() {
 	go func() {
-		if c.rawEventChan == nil {
-			c.rawEventChan = make(chan *rawEvent)
+		if c.eventChan == nil {
+			c.eventChan = make(chan *Event)
 		}
 
 		c.eventReceiverQuit = make(chan struct{})
@@ -55,8 +52,8 @@ func (c *Client) startEventReceiver() {
 			case <-c.eventReceiverQuit:
 				log.Println("Quitting event receiver")
 				return
-			case event := <-c.rawEventChan:
-				c.handleEvent(event.EventType, event.Data1, event.Data2)
+			case event := <-c.eventChan:
+				go c.handleEvent(event)
 			}
 		}
 	}()
@@ -72,7 +69,7 @@ func handleError(event *Event) {
 }
 
 func dcErrorString(event *Event) string {
-	name := errorTypeNames[event.EventType]
+	name := eventNames[event.EventType]
 
 	str, err := event.Data2.String()
 
@@ -91,30 +88,23 @@ func dcErrorString(event *Event) string {
 	return fmt.Sprintf("%s: %s", name, *str)
 }
 
-func (c *Client) handleEvent(event int, data1 C.uintptr_t, data2 C.uintptr_t) {
-	eventStruct := &Event{
-		EventType: event,
-		Data1: Data{
-			DataType: Data1TypeForEvent(event),
-			data:     data1,
-		},
-		Data2: Data{
-			DataType: Data2TypeForEvent(event),
-			data:     data2,
-		},
-	}
+func (c *Client) handleEvent(event *Event) {
+	eventType := event.EventType
 
-	handler, ok := c.handlerMap[event]
+	handler, ok := c.handlerMap[eventType]
 
 	if !ok {
-		if (EVENT_TYPES_ERROR & event) == event {
-			go handleError(eventStruct)
+		if (EVENT_TYPES_ERROR&eventType) == eventType || eventType == DC_EVENT_WARNING {
+			handleError(event)
+			return
 		}
+
+		log.Printf("Got unhandled event: %s", eventNames[eventType])
 
 		return
 	}
 
-	go handler(c.context, eventStruct)
+	handler(c.context, event)
 }
 
 func (c *Client) Open(dbLocation string) {

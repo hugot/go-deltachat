@@ -68,7 +68,7 @@ type EventHandler func(
 	event int,
 	data1 C.uintptr_t,
 	data2 C.uintptr_t,
-) uint
+) int
 
 func (c *Context) SetConfig(key string, value string) {
 	cKey, cValue := C.CString(key), C.CString(value)

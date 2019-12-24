@@ -10,7 +10,42 @@ import (
 
 type Data struct {
 	DataType uint8
-	data     C.uintptr_t
+	str      string
+	i        int
+}
+
+func uintPtrToString(ptr C.uintptr_t) string {
+	return C.GoString((*C.char)(unsafe.Pointer(uintptr(ptr))))
+}
+
+func NewData1(event int, data1 C.uintptr_t) *Data {
+	return newData(event, data1, Data1TypeForEvent)
+}
+
+func NewData2(event int, data2 C.uintptr_t) *Data {
+	return newData(event, data2, Data2TypeForEvent)
+}
+
+func newData(event int, data C.uintptr_t, typeProvider func(int) uint8) *Data {
+	dataType := typeProvider(event)
+
+	if dataType == DATA_TYPE_STRING {
+		return &Data{
+			DataType: dataType,
+			str:      uintPtrToString(data),
+		}
+	}
+
+	if dataType == DATA_TYPE_INT {
+		return &Data{
+			DataType: dataType,
+			i:        int(data),
+		}
+	}
+
+	return &Data{
+		DataType: dataType,
+	}
 }
 
 func dataTypeError(expected uint8, actual uint8) error {
@@ -28,11 +63,7 @@ func (d *Data) String() (*string, error) {
 		return nil, dataTypeError(DATA_TYPE_STRING, d.DataType)
 	}
 
-	// Now there's a lot of stuff going on, not sure if this can be done in a prettier
-	// way..
-	str := C.GoString((*C.char)(unsafe.Pointer(uintptr(d.data))))
-
-	return &str, nil
+	return &d.str, nil
 }
 
 func (d *Data) Int() (*int, error) {
@@ -40,7 +71,5 @@ func (d *Data) Int() (*int, error) {
 		return nil, dataTypeError(DATA_TYPE_INT, d.DataType)
 	}
 
-	i := int(d.data)
-
-	return &i, nil
+	return &d.i, nil
 }
