@@ -12,6 +12,8 @@ destination="$here/constants.go"
 import "C"\n'
 
     printf 'const (\n'
+
+    event_names=()
     
     while read -r define const_name rest; do
         if [[ "$define" == '#define' ]]; then
@@ -33,12 +35,21 @@ import "C"\n'
                    *) false;;
                esac
             then
+                [[ "$const_name" == 'DC_EVENT'* ]] && event_names+=("$const_name")
                 printf '%s = int(C.%s)\n' "$const_name" "$const_name"
             fi
         fi
     done < "$here"/../deltachat-ffi/include/deltachat.h
 
     printf ')\n'
+
+    printf 'var eventNames = map[int]string{\n'
+
+    for const_name in "${event_names[@]}"; do
+        printf '%s:"%s",\n' "$const_name" "$const_name"
+    done
+
+    printf '}\n'
 } > "$destination"
 
 gofmt -w "$destination"
