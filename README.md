@@ -11,72 +11,103 @@ used however you please. The recommended way is to use deltachat.Client, which i
 layer on top of deltachat's context datatype. It will make handeling events that are
 emitted by deltachat easier and removes the need for some boilerplate code.
 
-Example:
-
+The following example will send every line you type as a message to chat@example.com:
 ```go
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
 
 	"github.com/hugot/go-deltachat/deltachat"
-	"github.com/labstack/gommon/log"
 )
 
 func main() {
 	client := &deltachat.Client{}
 
-	client.Open("/var/lib/deltabot/stuff.db")
+   	addr := "chat@example.com"
 
-    // Bear in mind that the config parameters are stored in the sqlite database
-    // So these config values do not need to be set during each run. They're just here
-    // to have a working example.
-	client.SetConfig("addr", "test@example.com")
-	client.SetConfig("mail_pw", "secret password")
-	client.SetConfig("mail_server", "imap.example.com")
-	client.SetConfig("mail_user", "test@example.com")
-	client.SetConfig("mail_port", "993")
-
-	client.SetConfig("send_pw", "secret password")
-	client.SetConfig("send_server", "smtp.example.com")
-	client.SetConfig("send_user", "test@example.com")
-	client.SetConfig("send_port", "587")
-
-	client.SetConfig(
-		"server_flags",
-		fmt.Sprintf(
-			"%d",
-			deltachat.DC_LP_AUTH_NORMAL|
-				deltachat.DC_LP_IMAP_SOCKET_SSL|
-				deltachat.DC_LP_SMTP_SOCKET_STARTTLS,
-		),
-	)
-
-	client.Configure()
-
-	addr := "chat@example.com"
-    
    	client.On(deltachat.DC_EVENT_IMAP_CONNECTED, func(c *deltachat.Context, e *deltachat.Event) {
 		contactID := c.CreateContact(nil, &addr)
 		chatID := c.CreateChatByContactID(contactID)
 
 		c.SendTextMessage(chatID, "Hello World!")
 
-		log.Info("Sent message!")
+        log.Println("Sent hello world message!")
 	})
 
 	// Handler for info logs from libdeltachat
 	client.On(deltachat.DC_EVENT_INFO, func(c *deltachat.Context, e *deltachat.Event) {
 		info, _ := e.Data2.String()
 
-		log.Info(*info)
+        log.Println(*info)
 	})
 
-    // Prevent the program from exiting
-	wait := make(chan struct{})
+	client.Open("/var/lib/deltabot/stuff.db")
+
+    // Bear in mind that the config parameters are stored in the sqlite database
+    // So these config values do not need to be set during each run.
+    if !client.IsConfigured() {
+        log.Println("Configuring")
+
+        // Connection parameters, change as necessary
+	    client.SetConfig("addr", "test@example.com")
+	    client.SetConfig("mail_pw", "secret password")
+	    client.SetConfig("mail_server", "imap.example.com")
+	    client.SetConfig("mail_user", "test@example.com")
+	    client.SetConfig("mail_port", "993")
+
+        client.SetConfig("send_pw", "secret password")
+        client.SetConfig("send_server", "smtp.example.com")
+        client.SetConfig("send_user", "test@example.com")
+        client.SetConfig("send_port", "587")
+
+        client.SetConfig(
+			"server_flags",
+			fmt.Sprintf(
+				"%d",
+				deltachat.DC_LP_AUTH_NORMAL|
+					deltachat.DC_LP_IMAP_SOCKET_SSL|
+					deltachat.DC_LP_SMTP_SOCKET_STARTTLS,
+			),
+		)
+
+		client.Configure()
+    }
+
+    wait := make(chan os.Signal, 1)
+	signal.Notify(wait, os.Interrupt)
+
+	c := client.Context()
+	contactID := c.CreateContact(nil, &addr)
+	chatID := c.CreateChatByContactID(contactID)
+
+	reader := bufio.NewReader(os.Stdin)
+	messageChan := make(chan string)
+
+	go func() {
+		for {
+			fmt.Print("Enter text: ")
+			text, _ := reader.ReadString('\n')
+			messageChan <- text
+		}
+	}()
 
 	for {
-		<-wait
+		select {
+		case sig := <-wait:
+			log.Println(sig)
+
+            // Give dc an opportunity to perform some shutdown logic
+            // and close it's db.
+			client.Close()
+			return
+		case text := <-messageChan:
+			c.SendTextMessage(chatID, text)
+		}
 	}
 }
 ```
