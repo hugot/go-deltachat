@@ -5,6 +5,7 @@ import "C"
 import (
 	"fmt"
 	"log"
+	"sync"
 )
 
 type ClientEventHandler func(context *Context, event *Event)
@@ -14,6 +15,7 @@ type Client struct {
 	eventChan         chan *Event
 	eventReceiverQuit chan struct{}
 	handlerMap        map[int]ClientEventHandler
+	handlerMapMutex   sync.RWMutex
 }
 
 func (c *Client) On(event int, handler ClientEventHandler) {
@@ -21,7 +23,9 @@ func (c *Client) On(event int, handler ClientEventHandler) {
 		c.handlerMap = make(map[int]ClientEventHandler)
 	}
 
+	c.handlerMapMutex.Lock()
 	c.handlerMap[event] = handler
+	c.handlerMapMutex.Unlock()
 }
 
 func (c *Client) queueEvent(event int, data1 C.uintptr_t, data2 C.uintptr_t) int {
@@ -91,7 +95,9 @@ func dcErrorString(event *Event) string {
 func (c *Client) handleEvent(event *Event) {
 	eventType := event.EventType
 
+	c.handlerMapMutex.RLock()
 	handler, ok := c.handlerMap[eventType]
+	c.handlerMapMutex.RUnlock()
 
 	if !ok {
 		if (EVENT_TYPES_ERROR&eventType) == eventType || eventType == DC_EVENT_WARNING {
