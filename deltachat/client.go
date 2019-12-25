@@ -16,6 +16,8 @@ type Client struct {
 	eventReceiverQuit chan struct{}
 	handlerMap        map[int]ClientEventHandler
 	handlerMapMutex   sync.RWMutex
+	smtpWorker        worker
+	imapWorker        worker
 }
 
 func (c *Client) On(event int, handler ClientEventHandler) {
@@ -113,20 +115,53 @@ func (c *Client) handleEvent(event *Event) {
 	handler(c.context, event)
 }
 
+func (c *Client) imapRoutine() {
+	context := c.context
+
+	context.PerformIMAPJobs()
+	context.PerformIMAPFetch()
+	context.PerformIMAPIdle()
+}
+
+func (c *Client) smtpRoutine() {
+	context := c.context
+
+	context.PerformSMTPJobs()
+	context.PerformSMTPIdle()
+}
+
 func (c *Client) Open(dbLocation string) {
 	context := NewContext()
 
-	context.StartWorkers()
-	context.Open(dbLocation)
+	c.startEventReceiver()
 
 	context.SetHandler(c.queueEvent)
-	c.context = context
+	context.Open(dbLocation)
 
-	c.startEventReceiver()
+	c.imapWorker = newWorker("IMAP", c.imapRoutine, context.InterruptIMAPIdle)
+	c.smtpWorker = newWorker("SMTP", c.smtpRoutine, context.InterruptSMTPIdle)
+
+	c.StartWorkers()
+
+	c.context = context
+}
+
+func (c *Client) StartWorkers() {
+	c.imapWorker.Start()
+	c.smtpWorker.Start()
+}
+
+func (c *Client) StopWorkers() {
+	c.imapWorker.Stop()
+	c.smtpWorker.Stop()
 }
 
 func (c *Client) Configure() {
 	(*c.context).Configure()
+}
+
+func (c *Client) IsConfigured() bool {
+	return (*c.context).IsConfigured()
 }
 
 func (c *Client) SetConfig(key string, value string) {
@@ -142,7 +177,14 @@ func (c *Client) GetConfig(key string) string {
 }
 
 func (c *Client) Close() {
-	c.stopEventReceiver()
+	log.Println("Stopping workers")
+	c.StopWorkers()
+
+	log.Println("Closing context")
 	(*c.context).Close()
+
+	log.Println("Unreffing context")
 	(*c.context).Unref()
+
+	c.stopEventReceiver()
 }
