@@ -28,44 +28,45 @@ import (
 func main() {
 	client := &deltachat.Client{}
 
-   	addr := "chat@example.com"
+	addr := "chat@example.com"
 
-   	client.On(deltachat.DC_EVENT_IMAP_CONNECTED, func(c *deltachat.Context, e *deltachat.Event) {
+	client.On(deltachat.DC_EVENT_IMAP_CONNECTED, func(c *deltachat.Context, e *deltachat.Event) {
 		contactID := c.CreateContact(nil, &addr)
 		chatID := c.CreateChatByContactID(contactID)
 
 		c.SendTextMessage(chatID, "Hello World!")
 
-        log.Println("Sent hello world message!")
+		log.Println("Sent hello world message!")
 	})
 
 	// Handler for info logs from libdeltachat
 	client.On(deltachat.DC_EVENT_INFO, func(c *deltachat.Context, e *deltachat.Event) {
 		info, _ := e.Data2.String()
 
-        log.Println(*info)
+		log.Println(*info)
 	})
 
 	client.Open("/var/lib/deltabot/stuff.db")
 
-    // Bear in mind that the config parameters are stored in the sqlite database
-    // So these config values do not need to be set during each run.
-    if !client.IsConfigured() {
-        log.Println("Configuring")
 
-        // Connection parameters, change as necessary
-	    client.SetConfig("addr", "test@example.com")
-	    client.SetConfig("mail_pw", "secret password")
-	    client.SetConfig("mail_server", "imap.example.com")
-	    client.SetConfig("mail_user", "test@example.com")
-	    client.SetConfig("mail_port", "993")
+	// Bear in mind that the config parameters are stored in the sqlite database
+	// So these config values do not need to be set during each run.
+	if !client.IsConfigured() {
+		log.Println("Configuring")
 
-        client.SetConfig("send_pw", "secret password")
-        client.SetConfig("send_server", "smtp.example.com")
-        client.SetConfig("send_user", "test@example.com")
-        client.SetConfig("send_port", "587")
+		// Connection parameters, change as necessary
+		client.SetConfig("addr", "test@example.com")
+		client.SetConfig("mail_pw", "secret password")
+		client.SetConfig("mail_server", "imap.example.com")
+		client.SetConfig("mail_user", "test@example.com")
+		client.SetConfig("mail_port", "993")
 
-        client.SetConfig(
+		client.SetConfig("send_pw", "secret password")
+		client.SetConfig("send_server", "smtp.example.com")
+		client.SetConfig("send_user", "test@example.com")
+		client.SetConfig("send_port", "587")
+
+		client.SetConfig(
 			"server_flags",
 			fmt.Sprintf(
 				"%d",
@@ -76,9 +77,9 @@ func main() {
 		)
 
 		client.Configure()
-    }
+	}
 
-    wait := make(chan os.Signal, 1)
+	wait := make(chan os.Signal, 1)
 	signal.Notify(wait, os.Interrupt)
 
 	c := client.Context()
@@ -101,8 +102,8 @@ func main() {
 		case sig := <-wait:
 			log.Println(sig)
 
-            // Give dc an opportunity to perform some shutdown logic
-            // and close it's db.
+			// Give dc an opportunity to perform some shutdown logic
+			// and close it's db.
 			client.Close()
 			return
 		case text := <-messageChan:
