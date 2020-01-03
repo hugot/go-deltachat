@@ -16,3 +16,14 @@ dc_context_t* godeltachat_create_context()
 {
   return dc_context_new(godeltachat_eventhandler, NULL, NULL);
 }
+
+void godeltachat_do_imap_routine(dc_context_t* context) {
+  dc_perform_imap_jobs(context);
+  dc_perform_imap_fetch(context);
+  dc_perform_imap_idle(context);
+}
+
+void godeltachat_do_smtp_routine(dc_context_t* context) {
+  dc_perform_smtp_jobs(context);
+  dc_perform_smtp_idle(context);
+}

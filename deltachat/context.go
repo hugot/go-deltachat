@@ -104,6 +104,14 @@ func (c *Context) handleEvent(
 	return C.uintptr_t(c.eventHandler(int(event), data1, data2))
 }
 
+func (c *Context) PerformIMAPRoutine() {
+	C.godeltachat_do_imap_routine(c.context)
+}
+
+func (c *Context) PerformSMTPRoutine() {
+	C.godeltachat_do_smtp_routine(c.context)
+}
+
 func (c *Context) PerformIMAPJobs() {
 	C.dc_perform_imap_jobs(c.context)
 }

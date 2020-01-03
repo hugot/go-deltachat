@@ -118,16 +118,13 @@ func (c *Client) handleEvent(event *Event) {
 func (c *Client) imapRoutine() {
 	context := c.context
 
-	context.PerformIMAPJobs()
-	context.PerformIMAPFetch()
-	context.PerformIMAPIdle()
+	context.PerformIMAPRoutine()
 }
 
 func (c *Client) smtpRoutine() {
 	context := c.context
 
-	context.PerformSMTPJobs()
-	context.PerformSMTPIdle()
+	context.PerformSMTPRoutine()
 }
 
 func (c *Client) Open(dbLocation string) {
