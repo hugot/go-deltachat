@@ -116,3 +116,9 @@ func main() {
 ## Documentation
 Since the API is pretty much the go-equivalent of the C API, it should suffice to read the
 documentation at [c.delta.chat](https://c.delta.chat) for most datatypes and functions.
+
+## Platform support
+This library should work on all platforms that are supported by Go and Deltachat. The
+included libdeltachat file has been compiled on an amd64 system, so no extra setup is
+required on that architecture. On other CPU architectures you will need to compile the
+deltachat core FFI and place it in the deltachat-ffi folder before compiling your go code.
