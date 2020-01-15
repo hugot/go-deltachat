@@ -5,6 +5,17 @@ through cgo and aims to wrap the entire API that deltachat exposes. All datatype
 wrapped in go datatypes and all methods are wrapped in go functions. Efford has been made
 to abstract away as much memory management as possible.
 
+## Installation
+
+```bash
+go get github.com/hugot/go-deltachat/deltachat
+```
+
+## Current version of libdeltachat
+The libdeltachat binary that is distributed with go-deltachat is the C FFI to:
+
+`deltachat v1.0.0-beta.22`
+
 ## Usage example
 This library wraps the entire FFI API that deltachat has to offer and can of course be
 used however you please. The recommended way is to use deltachat.Client, which is a thin
