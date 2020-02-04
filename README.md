@@ -37,7 +37,7 @@ import (
 )
 
 func main() {
-	client := &deltachat.Client{}
+	client := deltachat.NewClient(nil)
 
 	addr := "chat@example.com"
 

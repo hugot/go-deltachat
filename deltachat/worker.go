@@ -3,7 +3,6 @@ package deltachat
 import (
 	"errors"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -14,9 +13,15 @@ type worker struct {
 	quit      chan bool
 	hasQuit   chan bool
 	running   bool
+	logger    Logger
 }
 
-func newWorker(name string, work func(), interrupt func()) worker {
+func newWorker(
+	name string,
+	work func(),
+	interrupt func(),
+	logger Logger,
+) worker {
 	return worker{
 		Name:      name,
 		work:      work,
@@ -24,6 +29,7 @@ func newWorker(name string, work func(), interrupt func()) worker {
 		quit:      make(chan bool, 1),
 		hasQuit:   make(chan bool, 1),
 		running:   false,
+		logger:    logger,
 	}
 }
 
@@ -38,7 +44,7 @@ func (w *worker) Start() error {
 		for {
 			select {
 			case <-w.quit:
-				log.Printf("Quitting %s worker\n", w.Name)
+				w.logger.Printf("Quitting %s worker\n", w.Name)
 				w.hasQuit <- true
 				return
 			default:
@@ -59,7 +65,7 @@ func (w *worker) Stop() {
 			w.running = false
 			return
 		default:
-			log.Printf("Interrupting %s worker", w.Name)
+			w.logger.Printf("Interrupting %s worker", w.Name)
 			w.interrupt()
 			time.Sleep(100 * time.Millisecond)
 		}

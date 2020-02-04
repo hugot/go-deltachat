@@ -5,8 +5,14 @@ import "C"
 import (
 	"fmt"
 	"log"
+	"os"
 	"sync"
 )
+
+type Logger interface {
+	Println(...interface{})
+	Printf(format string, rest ...interface{})
+}
 
 type ClientEventHandler func(context *Context, event *Event)
 
@@ -18,13 +24,23 @@ type Client struct {
 	handlerMapMutex   sync.RWMutex
 	smtpWorker        worker
 	imapWorker        worker
+	logger            Logger
+}
+
+// Creates a new client that will use the provided logger. If logger is nil, a default
+// logger will be created that will write to stdout.
+func NewClient(logger Logger) *Client {
+	if logger == nil {
+		logger = log.New(os.Stdout, "", log.LstdFlags)
+	}
+
+	return &Client{
+		handlerMap: make(map[int]ClientEventHandler),
+		logger:     logger,
+	}
 }
 
 func (c *Client) On(event int, handler ClientEventHandler) {
-	if c.handlerMap == nil {
-		c.handlerMap = make(map[int]ClientEventHandler)
-	}
-
 	c.handlerMapMutex.Lock()
 	c.handlerMap[event] = handler
 	c.handlerMapMutex.Unlock()
@@ -56,7 +72,7 @@ func (c *Client) startEventReceiver() {
 		for {
 			select {
 			case <-c.eventReceiverQuit:
-				log.Println("Quitting event receiver")
+				c.logger.Println("Quitting event receiver")
 				return
 			case event := <-c.eventChan:
 				go c.handleEvent(event)
@@ -70,17 +86,17 @@ func (c *Client) stopEventReceiver() {
 }
 
 // Default error handler
-func handleError(event *Event) {
-	log.Println(dcErrorString(event))
+func (c *Client) handleError(event *Event) {
+	c.logger.Println(c.dcErrorString(event))
 }
 
-func dcErrorString(event *Event) string {
+func (c *Client) dcErrorString(event *Event) string {
 	name := eventNames[event.EventType]
 
 	str, err := event.Data2.String()
 
 	if err != nil {
-		log.Println(
+		c.logger.Println(
 			fmt.Sprintf(
 				"Unexpected data type while handeling %s:",
 				name,
@@ -103,11 +119,11 @@ func (c *Client) handleEvent(event *Event) {
 
 	if !ok {
 		if (EVENT_TYPES_ERROR&eventType) == eventType || eventType == DC_EVENT_WARNING {
-			handleError(event)
+			c.handleError(event)
 			return
 		}
 
-		log.Printf("Got unhandled event: %s", eventNames[eventType])
+		c.logger.Printf("Got unhandled event: %s", eventNames[eventType])
 
 		return
 	}
@@ -135,8 +151,8 @@ func (c *Client) Open(dbLocation string) {
 	context.SetHandler(c.queueEvent)
 	context.Open(dbLocation)
 
-	c.imapWorker = newWorker("IMAP", c.imapRoutine, context.InterruptIMAPIdle)
-	c.smtpWorker = newWorker("SMTP", c.smtpRoutine, context.InterruptSMTPIdle)
+	c.imapWorker = newWorker("IMAP", c.imapRoutine, context.InterruptIMAPIdle, c.logger)
+	c.smtpWorker = newWorker("SMTP", c.smtpRoutine, context.InterruptSMTPIdle, c.logger)
 
 	c.StartWorkers()
 
@@ -174,13 +190,13 @@ func (c *Client) GetConfig(key string) string {
 }
 
 func (c *Client) Close() {
-	log.Println("Stopping workers")
+	c.logger.Println("Stopping workers")
 	c.StopWorkers()
 
-	log.Println("Closing context")
+	c.logger.Println("Closing context")
 	(*c.context).Close()
 
-	log.Println("Unreffing context")
+	c.logger.Println("Unreffing context")
 	(*c.context).Unref()
 
 	c.stopEventReceiver()
